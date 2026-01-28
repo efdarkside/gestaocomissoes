@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Comissões - ESAN/UFMS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root{--bg:#0a0e14;--bg2:#141922;--bg3:#1a2130;--card:#1e2636;--blue:#3b82f6;--cyan:#06b6d4;--green:#10b981;--amber:#f59e0b;--rose:#f43f5e;--purple:#a855f7;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--border:#2d3a4f}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+        .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:1rem 2rem;position:sticky;top:0;z-index:100}
+        .header-content{max-width:1600px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+        .logo{display:flex;align-items:center;gap:1rem}
+        .logo-icon{width:48px;height:48px;background:linear-gradient(135deg,var(--blue),var(--cyan));border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.5rem}
+        .logo h1{font-size:1.4rem;background:linear-gradient(135deg,var(--blue),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .logo span{font-size:0.85rem;color:var(--text2)}
+        .nav{display:flex;gap:0.5rem;background:var(--bg3);padding:0.4rem;border-radius:12px;flex-wrap:wrap}
+        .nav-btn{padding:0.6rem 1rem;border:none;background:transparent;color:var(--text2);font-family:inherit;font-size:0.9rem;font-weight:500;border-radius:8px;cursor:pointer;transition:all 0.3s}
+        .nav-btn:hover{color:var(--text);background:var(--card)}
+        .nav-btn.active{background:var(--blue);color:white}
+        .main{max-width:1600px;margin:0 auto;padding:2rem}
+        .section{display:none;animation:fadeIn 0.4s}
+        .section.active{display:block}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;margin-bottom:2rem}
+        .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;position:relative;overflow:hidden}
+        .card::before{content:'';position:absolute;top:0;left:0;width:100%;height:4px}
+        .card.blue::before{background:var(--blue)}.card.green::before{background:var(--green)}.card.purple::before{background:var(--purple)}
+        .card-label{font-size:0.85rem;color:var(--text2);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.5px}
+        .card-value{font-size:2.5rem;font-weight:700}
+        .card.blue .card-value{color:var(--blue)}.card.green .card-value{color:var(--green)}.card.purple .card-value{color:var(--purple)}
+        .card-detail{font-size:0.9rem;color:var(--text3)}
+        .alert{background:linear-gradient(135deg,rgba(244,63,94,0.1),rgba(245,158,11,0.1));border:1px solid rgba(244,63,94,0.3);border-radius:16px;padding:1.5rem;margin-bottom:2rem}
+        .alert-title{display:flex;align-items:center;gap:0.5rem;font-size:1.1rem;font-weight:600;color:var(--rose);margin-bottom:1rem}
+        .alert-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+        .alert-item{display:flex;align-items:center;gap:1rem;background:var(--card);padding:1rem;border-radius:12px}
+        .alert-rank{font-size:1.3rem;font-weight:800;color:var(--rose);min-width:35px}
+        .alert-info h4{font-size:0.9rem;font-weight:600;margin-bottom:0.2rem}
+        .alert-info span{font-size:0.8rem;color:var(--text3)}
+        .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:1.5rem;margin-bottom:2rem}
+        .chart-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem}
+        .chart-title{font-size:1.1rem;font-weight:600;margin-bottom:1rem}
+        .chart-box{position:relative;height:300px}
+        .table-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+        .table-header{padding:1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+        .table-title{font-size:1.25rem;font-weight:600}
+        .search{display:flex;align-items:center;gap:0.5rem;background:var(--bg3);padding:0.5rem 1rem;border-radius:8px;border:1px solid var(--border)}
+        .search input{background:transparent;border:none;color:var(--text);font-family:inherit;font-size:0.9rem;outline:none;width:200px}
+        table{width:100%;border-collapse:collapse}
+        th{background:var(--bg3);padding:0.7rem 0.5rem;text-align:center;font-weight:600;font-size:0.7rem;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
+        th.left{text-align:left}
+        td{padding:0.7rem 0.5rem;border-bottom:1px solid var(--border);font-size:0.85rem;text-align:center}
+        td.left{text-align:left}
+        tr:hover{background:var(--bg3)}
+        .rank{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;font-weight:700;font-size:0.85rem}
+        .rank-1{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a1a1a}
+        .rank-2{background:linear-gradient(135deg,#d1d5db,#9ca3af);color:#1a1a1a}
+        .rank-3{background:linear-gradient(135deg,#d97706,#b45309);color:white}
+        .rank-n{background:var(--bg3);color:var(--text2)}
+        .cat{display:inline-block;padding:0.2rem 0.5rem;border-radius:4px;font-size:0.7rem;font-weight:600}
+        .cat-doc{background:rgba(59,130,246,0.2);color:var(--blue)}
+        .cat-tae{background:rgba(16,185,129,0.2);color:var(--green)}
+        .faixa{display:inline-block;padding:0.25rem 0.6rem;border-radius:20px;font-size:0.7rem;font-weight:600}
+        .f-crit{background:rgba(244,63,94,0.2);color:var(--rose)}
+        .f-alta{background:rgba(245,158,11,0.2);color:var(--amber)}
+        .f-mod{background:rgba(168,85,247,0.2);color:var(--purple)}
+        .f-baixa{background:rgba(16,185,129,0.2);color:var(--green)}
+        .f-sem{background:rgba(100,116,139,0.2);color:var(--text3)}
+        .tabs{display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+        .tab{padding:0.6rem 1rem;border:1px solid var(--border);background:var(--card);color:var(--text2);font-family:inherit;font-size:0.85rem;font-weight:500;border-radius:8px;cursor:pointer;transition:all 0.3s}
+        .tab:hover{border-color:var(--blue);color:var(--text)}
+        .tab.active{background:var(--blue);border-color:var(--blue);color:white}
+        .tab .count{background:rgba(255,255,255,0.2);padding:0.1rem 0.4rem;border-radius:10px;font-size:0.75rem;margin-left:0.3rem}
+        .com-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:1.5rem}
+        .com-card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+        .com-header{background:var(--bg3);padding:1rem 1.25rem;border-bottom:1px solid var(--border)}
+        .com-nome{font-size:0.95rem;font-weight:600}
+        .com-membros{padding:0.75rem 1.25rem}
+        .membro{display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--border)}
+        .membro:last-child{border-bottom:none}
+        .membro-nome{font-size:0.85rem}
+        .membro-func{font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;background:var(--bg3);color:var(--text2)}
+        .membro-func.pres{background:rgba(59,130,246,0.2);color:var(--blue)}
+        .membro-func.tit{background:rgba(16,185,129,0.2);color:var(--green)}
+        .legenda{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;padding:1rem;background:var(--bg3);border-radius:8px;font-size:0.8rem}
+        .legenda-item{display:flex;align-items:center;gap:0.4rem}
+        .legenda-item span{color:var(--text2)}
+        .loading{text-align:center;padding:4rem;color:var(--text2)}
+        .loading-spinner{width:40px;height:40px;border:4px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 1rem}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .error{background:rgba(244,63,94,0.1);border:1px solid var(--rose);border-radius:12px;padding:1.5rem;margin:2rem 0;color:var(--rose)}
+        .refresh-btn{background:var(--blue);color:white;border:none;padding:0.5rem 1rem;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.85rem;margin-left:1rem}
+        .refresh-btn:hover{background:#2563eb}
+        .legenda-container{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:2rem}
+        .legenda-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.5rem;overflow:hidden}
+        .legenda-titulo{font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--cyan)}
+        .tabela-pontuacao{width:100%;border-collapse:collapse;font-size:0.85rem}
+        .tabela-pontuacao th{background:var(--bg3);padding:0.6rem;text-align:left;font-weight:600;color:var(--text2);border:1px solid var(--border)}
+        .tabela-pontuacao th:last-child{text-align:center;width:50px}
+        .tabela-pontuacao td{padding:0.5rem 0.6rem;border:1px solid var(--border);vertical-align:middle}
+        .tabela-pontuacao td:last-child{text-align:center;font-weight:600}
+        .tabela-pontuacao .subtipo{font-size:0.75rem;color:rgba(255,255,255,0.7);font-weight:normal}
+        .row-inst{background:rgba(239,154,154,0.25)}
+        .row-inst td{color:#ffd7d7}
+        .row-set{background:rgba(255,204,128,0.25)}
+        .row-set td{color:#fff0d7}
+        .row-temp{background:rgba(255,245,157,0.25)}
+        .row-temp td{color:#fffde0}
+        .row-gest{background:rgba(165,214,167,0.25)}
+        .row-gest td{color:#d7ffdb}
+        .row-col{background:rgba(129,212,250,0.25)}
+        .row-col td{color:#d7f0ff}
+        .row-nde{background:rgba(179,157,219,0.25)}
+        .row-nde td{color:#e8dfff}
+        .row-coe{background:rgba(188,170,164,0.25)}
+        .row-coe td{color:#f0e8e5}
+        .legenda-tipos{display:flex;flex-direction:column;gap:0.75rem}
+        .leg-item{padding:0.75rem;border-radius:8px;border-left:4px solid}
+        .leg-item strong{display:block;margin-bottom:0.25rem;font-size:0.9rem}
+        .leg-item p{margin:0;font-size:0.8rem;color:var(--text2);line-height:1.4}
+        .leg-inst{background:rgba(239,154,154,0.1);border-color:#ef9a9a}
+        .leg-set{background:rgba(255,224,178,0.1);border-color:#ffcc80}
+        .leg-temp{background:rgba(255,245,157,0.1);border-color:#fff59d}
+        .leg-gest{background:rgba(165,214,167,0.1);border-color:#a5d6a7}
+        .leg-col{background:rgba(129,212,250,0.1);border-color:#81d4fa}
+        .leg-nde{background:rgba(179,157,219,0.1);border-color:#b39ddb}
+        .leg-coe{background:rgba(188,170,164,0.1);border-color:#bcaaa4}
+        .faixas-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.25rem;margin-bottom:2rem}
+        .faixas-titulo{font-size:1rem;font-weight:600;margin-bottom:1rem;color:var(--cyan)}
+        .faixas-grid{display:flex;flex-wrap:wrap;gap:1rem}
+        .faixa-item{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:var(--text2)}
+        @media(max-width:900px){.legenda-container{grid-template-columns:1fr}}
+        @media(max-width:768px){.header-content{flex-direction:column}.charts-grid,.com-grid{grid-template-columns:1fr}th,td{padding:0.5rem 0.3rem;font-size:0.7rem}}
+    </style>
+</head>
+<body>
+<header class="header"><div class="header-content">
+    <div class="logo">
+        <div class="logo-icon">E</div>
+        <div><h1>ESAN/UFMS</h1><span>Painel de Comissões</span></div>
+    </div>
+    <div style="display:flex;align-items:center">
+        <nav class="nav" id="nav"></nav>
+        <button class="refresh-btn" onclick="location.reload()">🔄 Atualizar</button>
+    </div>
+</div></header>
+<main class="main">
+    <section id="dashboard" class="section active">
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Carregando dados do Google Sheets...</p>
+        </div>
+        <div id="dashboard-content" style="display:none">
+            <div class="grid" id="stats-grid"></div>
+            <div class="alert">
+                <div class="alert-title">⚠️ Top 10 Servidores Mais Sobrecarregados</div>
+                <div class="alert-grid" id="top10"></div>
+            </div>
+            <div class="faixas-box">
+                <div class="faixas-titulo">🎯 Faixas de Sobrecarga</div>
+                <div class="faixas-grid">
+                    <span class="faixa-item"><span class="faixa f-sem">Sem atividade</span> 0 pts</span>
+                    <span class="faixa-item"><span class="faixa f-baixa">Baixa</span> 1-30 pts</span>
+                    <span class="faixa-item"><span class="faixa f-mod">Moderada</span> 31-60 pts</span>
+                    <span class="faixa-item"><span class="faixa f-alta">Alta</span> 61-99 pts</span>
+                    <span class="faixa-item"><span class="faixa f-crit">CRÍTICA</span> 100+ pts</span>
+                </div>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-card"><div class="chart-title">Distribuição por Faixa de Sobrecarga</div><div class="chart-box"><canvas id="chartFaixas"></canvas></div></div>
+                <div class="chart-card"><div class="chart-title">Participações por Tipo de Atividade</div><div class="chart-box"><canvas id="chartTipos"></canvas></div></div>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-card"><div class="chart-title">Top 15 Servidores por Pontuação</div><div class="chart-box" style="height:400px"><canvas id="chartTop15"></canvas></div></div>
+                <div class="chart-card"><div class="chart-title">Distribuição de Pontuação</div><div class="chart-box" style="height:400px"><canvas id="chartDist"></canvas></div></div>
+            </div>
+            <div class="legenda-container">
+                <div class="legenda-section">
+                    <div class="legenda-titulo">📊 Tabela de Pontuação</div>
+                    <table class="tabela-pontuacao">
+                        <thead>
+                            <tr><th>Tipo de Comissão</th><th>Função</th><th>Pts</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr class="row-inst"><td rowspan="2"><strong>Comissões Institucionais</strong><br><span class="subtipo">(Alta Importância) - 10 Pontos</span></td><td>Titular (x2)</td><td>20</td></tr>
+                            <tr class="row-inst"><td>Suplente (x1)</td><td>10</td></tr>
+                            <tr class="row-set"><td rowspan="2"><strong>Comissões Setoriais</strong><br><span class="subtipo">(Média Importância) - 7 Pontos</span></td><td>Presidente (x2)</td><td>14</td></tr>
+                            <tr class="row-set"><td>Membro (x1)</td><td>7</td></tr>
+                            <tr class="row-temp"><td rowspan="2"><strong>Comissões Temporárias</strong><br><span class="subtipo">(Baixa Importância) - 5 Pontos</span></td><td>Presidente (x2)</td><td>10</td></tr>
+                            <tr class="row-temp"><td>Membro (x1)</td><td>5</td></tr>
+                            <tr class="row-gest"><td rowspan="4"><strong>Gestão/Fiscalização</strong><br><span class="subtipo">(Alta Importância) - 10 Pontos</span></td><td>Gestor Titular (x2)</td><td>20</td></tr>
+                            <tr class="row-gest"><td>Gestor Subs. (x1)</td><td>10</td></tr>
+                            <tr class="row-gest"><td>Fiscal Tit. (x2)</td><td>20</td></tr>
+                            <tr class="row-gest"><td>Fiscal Subs. (x1)</td><td>10</td></tr>
+                            <tr class="row-col"><td rowspan="3"><strong>Colegiados de Curso</strong><br><span class="subtipo">(Alta Importância) - 10 Pontos</span></td><td>Coordenador (x2)</td><td>20</td></tr>
+                            <tr class="row-col"><td>Coord. Subs. (x1,5)</td><td>15</td></tr>
+                            <tr class="row-col"><td>Membro (x1)</td><td>10</td></tr>
+                            <tr class="row-nde"><td rowspan="2"><strong>NDEs</strong><br><span class="subtipo">(Média Importância) - 7 Pontos</span></td><td>Presidente (x2)</td><td>14</td></tr>
+                            <tr class="row-nde"><td>Membro (x1)</td><td>7</td></tr>
+                            <tr class="row-coe"><td rowspan="2"><strong>COEs</strong><br><span class="subtipo">(Média Importância) - 7 Pontos</span></td><td>Presidente (x2)</td><td>14</td></tr>
+                            <tr class="row-coe"><td>Membro (x1)</td><td>7</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="legenda-section">
+                    <div class="legenda-titulo">📋 Legendas</div>
+                    <div class="legenda-tipos">
+                        <div class="leg-item leg-inst"><strong>Comissões Institucionais</strong><p>COUN, COGRAD, COEX, COPP, CPPD, FAPEC.</p></div>
+                        <div class="leg-item leg-set"><strong>Comissões Setoriais</strong><p>Ensino, Extensão, Pesquisa, Avaliação (CSA), Interna de Avaliação (PROGEP), EMV, CODEC, Revista Desafio.</p></div>
+                        <div class="leg-item leg-temp"><strong>Comissões Temporárias</strong><p>Comissões Estágio Probatório, Comissões de MBA, Comissões de novos cursos, Effectus.</p></div>
+                        <div class="leg-item leg-gest"><strong>Gestão/Fiscalização ESAN</strong><p>Contratos/Convênios/Acordos da ESAN</p></div>
+                        <div class="leg-item leg-gest"><strong>Gestão/Fiscalização UFMS</strong><p>Contratos/Convênios/Acordos da UFMS</p></div>
+                        <div class="leg-item leg-col"><strong>Colegiados de Curso</strong><p>Presidente e membros dos colegiados de curso de graduação e pós-graduação</p></div>
+                        <div class="leg-item leg-nde"><strong>NDEs</strong><p>Núcleo Docente Estruturante dos cursos de graduação</p></div>
+                        <div class="leg-item leg-coe"><strong>COEs</strong><p>Comissões de Estágio dos cursos de graduação</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="ranking" class="section">
+        <div class="table-wrap">
+            <div class="table-header"><h2 class="table-title">Ranking de Servidores</h2><div class="search">🔍<input type="text" id="busca" placeholder="Buscar..."></div></div>
+            <div class="legenda">
+                <div class="legenda-item"><b>Inst</b><span>= Com. Institucionais</span></div>
+                <div class="legenda-item"><b>Set</b><span>= Com. Setoriais</span></div>
+                <div class="legenda-item"><b>Temp</b><span>= Com. Temporárias</span></div>
+                <div class="legenda-item"><b>Gest</b><span>= Gestão/Fiscalização</span></div>
+                <div class="legenda-item"><b>Col</b><span>= Colegiados</span></div>
+                <div class="legenda-item"><b>NDE</b><span>= Núcleos Docentes</span></div>
+                <div class="legenda-item"><b>COE</b><span>= Com. de Estágio</span></div>
+            </div>
+            <div style="overflow-x:auto"><table><thead><tr><th>#</th><th class="left">Servidor</th><th>Cat</th><th>Inst</th><th>Set</th><th>Temp</th><th>Gest</th><th>Col</th><th>NDE</th><th>COE</th><th>Total</th><th>Pts</th><th>Faixa</th></tr></thead><tbody id="tbody"></tbody></table></div>
+        </div>
+    </section>
+    <section id="comissoes" class="section">
+        <div class="tabs" id="tabs"></div>
+        <div class="com-grid" id="comGrid"></div>
+    </section>
+</main>
+
+<script>
+// Base URL da planilha
+var BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRQ-PyYg0VH0xczqF-z_0Q1w2bXeVYB78Fi3qDLVRWgWYTF28deX6syWXOfm7cOGRHPN-nauQ7HdNOV/pub?';
+
+// GIDs das abas
+var GIDS = {
+    quadro: '909290848',
+    institucionais: '365932280',
+    setoriais: '1823503557',
+    temporarias: '1916340571',
+    gestao_esan: '485706636',
+    gestao_ufms: '971607799',
+    colegiados: '0',
+    ndes: '1681889208',
+    coes: '806480480'
+};
+
+// Proxy CORS (usando corsproxy.io)
+var PROXY = 'https://corsproxy.io/?';
+
+// Dados globais
+var Q = [];
+var COM = {};
+var curSection = 'dashboard';
+var curTipo = 'institucionais';
+var charts = {};
+
+// Função para construir URL com proxy
+function buildURL(gid) {
+    var url = BASE + 'gid=' + gid + '&single=true&output=csv';
+    return PROXY + encodeURIComponent(url);
+}
+
+// Função para carregar CSV
+function loadCSV(gid) {
+    return new Promise(function(resolve, reject) {
+        var url = buildURL(gid);
+        Papa.parse(url, {
+            download: true,
+            header: false,
+            complete: function(results) {
+                resolve(results.data);
+            },
+            error: function(err) {
+                reject(err);
+            }
+        });
+    });
+}
+
+// Processar Quadro
+function processQuadro(data) {
+    Q = [];
+    for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        if (!row[1] || row[1].toString().trim() === '') continue;
+        
+        var cat = (row[2] || '').toString().trim();
+        if (cat === 'TEC') cat = 'TAE';
+        else if (cat !== 'TAE') cat = 'DOC';
+        
+        Q.push({
+            n: row[1].toString().trim(),
+            c: cat,
+            i: parseInt(row[3]) || 0,
+            s: parseInt(row[5]) || 0,
+            t: parseInt(row[7]) || 0,
+            ge: parseInt(row[9]) || 0,
+            gu: parseInt(row[11]) || 0,
+            co: parseInt(row[13]) || 0,
+            nd: parseInt(row[15]) || 0,
+            ce: parseInt(row[17]) || 0,
+            tot: parseInt(row[19]) || 0,
+            pt: parseInt(row[20]) || 0,
+            f: (row[21] || 'Sem atividade').toString().trim()
+        });
+    }
+    Q.sort(function(a, b) { return b.pt - a.pt; });
+}
+
+// Processar Comissões
+function processComissoes(data, colNome, colFunc) {
+    var comissoes = [];
+    var atual = null;
+    
+    for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        var colA = (row[0] || '').toString().trim();
+        
+        if (colA !== '' && colA !== '-') {
+            atual = { nm: colA, mb: [] };
+            comissoes.push(atual);
+        } else if (atual) {
+            var nome = (row[colNome] || '').toString().trim();
+            var func = (row[colFunc] || '').toString().trim();
+            if (nome !== '' && nome !== '-') {
+                atual.mb.push({ n: nome, f: func });
+            }
+        }
+    }
+    return comissoes;
+}
+
+// Carregar todos os dados
+async function loadAllData() {
+    try {
+        document.getElementById('loading').innerHTML = '<div class="loading-spinner"></div><p>Carregando Quadro de Servidores...</p>';
+        
+        // Carregar Quadro
+        var quadroData = await loadCSV(GIDS.quadro);
+        processQuadro(quadroData);
+        
+        // Carregar Comissões
+        var comConfigs = [
+            ['institucionais', 2, 3],
+            ['setoriais', 2, 3],
+            ['temporarias', 2, 3],
+            ['gestao_esan', 1, 2],
+            ['gestao_ufms', 1, 2],
+            ['colegiados', 2, 3],
+            ['ndes', 2, 3],
+            ['coes', 2, 3]
+        ];
+        
+        for (var i = 0; i < comConfigs.length; i++) {
+            var cfg = comConfigs[i];
+            document.getElementById('loading').innerHTML = '<div class="loading-spinner"></div><p>Carregando ' + cfg[0] + '...</p>';
+            var comData = await loadCSV(GIDS[cfg[0]]);
+            COM[cfg[0]] = processComissoes(comData, cfg[1], cfg[2]);
+        }
+        
+        // Esconder loading e mostrar conteúdo
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard-content').style.display = 'block';
+        
+        // Renderizar tudo
+        renderAll();
+        
+    } catch (err) {
+        console.error(err);
+        document.getElementById('loading').innerHTML = '<div class="error">Erro ao carregar dados.<br><br>Possíveis causas:<br>• Planilha não está publicada<br>• Problema de conexão<br><br>Tente recarregar a página.</div>';
+    }
+}
+
+// Renderizar tudo
+function renderAll() {
+    renderNav();
+    renderStats();
+    renderTop10();
+    renderTable(Q);
+    renderTabs();
+    renderCom();
+    initCharts();
+    
+    document.getElementById('busca').addEventListener('input', function() {
+        var v = this.value.toLowerCase();
+        var filtered = Q.filter(function(s) { return s.n.toLowerCase().indexOf(v) >= 0; });
+        renderTable(filtered);
+    });
+}
+
+// Navegação
+function showSection(id) {
+    curSection = id;
+    var sections = document.querySelectorAll('.section');
+    for (var i = 0; i < sections.length; i++) sections[i].classList.remove('active');
+    document.getElementById(id).classList.add('active');
+    renderNav();
+}
+
+function renderNav() {
+    var items = [['dashboard', 'Dashboard'], ['ranking', 'Ranking'], ['comissoes', 'Comissões']];
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+        var cls = items[i][0] === curSection ? 'nav-btn active' : 'nav-btn';
+        html += '<button class="' + cls + '" onclick="showSection(\'' + items[i][0] + '\')">' + items[i][1] + '</button>';
+    }
+    document.getElementById('nav').innerHTML = html;
+}
+
+// Stats
+function renderStats() {
+    var total = Q.length;
+    var docentes = Q.filter(function(s) { return s.c === 'DOC'; }).length;
+    var taes = Q.filter(function(s) { return s.c === 'TAE'; }).length;
+    var percDoc = ((docentes / total) * 100).toFixed(1);
+    var percTae = ((taes / total) * 100).toFixed(1);
+    
+    document.getElementById('stats-grid').innerHTML = 
+        '<div class="card blue"><div class="card-label">Total de Servidores</div><div class="card-value">' + total + '</div><div class="card-detail">Docentes e Técnicos-Administrativos</div></div>' +
+        '<div class="card green"><div class="card-label">Docentes</div><div class="card-value">' + docentes + '</div><div class="card-detail">' + percDoc + '% do total</div></div>' +
+        '<div class="card purple"><div class="card-label">Técnicos-Administrativos</div><div class="card-value">' + taes + '</div><div class="card-detail">' + percTae + '% do total</div></div>';
+}
+
+// Top 10
+function renderTop10() {
+    var html = '';
+    for (var i = 0; i < 10 && i < Q.length; i++) {
+        var s = Q[i];
+        html += '<div class="alert-item"><div class="alert-rank">' + (i + 1) + 'º</div><div class="alert-info"><h4>' + s.n + '</h4><span>' + s.pt + ' pontos • ' + s.tot + ' participações</span></div></div>';
+    }
+    document.getElementById('top10').innerHTML = html;
+}
+
+// Tabela
+function renderTable(data) {
+    var html = '';
+    for (var i = 0; i < data.length; i++) {
+        var s = data[i];
+        var idx = Q.indexOf(s);
+        var rk = idx < 3 ? 'rank-' + (idx + 1) : 'rank-n';
+        var ct = s.c === 'DOC' ? 'cat-doc' : 'cat-tae';
+        var ctLabel = s.c === 'DOC' ? 'DOC' : 'TAE';
+        var fx = s.f === 'CRÍTICA' ? 'f-crit' : s.f === 'Alta' ? 'f-alta' : s.f === 'Moderada' ? 'f-mod' : s.f === 'Baixa' ? 'f-baixa' : 'f-sem';
+        
+        html += '<tr><td><span class="rank ' + rk + '">' + (idx + 1) + '</span></td><td class="left">' + s.n + '</td><td><span class="cat ' + ct + '">' + ctLabel + '</span></td>';
+        html += '<td>' + (s.i || '-') + '</td><td>' + (s.s || '-') + '</td><td>' + (s.t || '-') + '</td><td>' + ((s.ge + s.gu) || '-') + '</td>';
+        html += '<td>' + (s.co || '-') + '</td><td>' + (s.nd || '-') + '</td><td>' + (s.ce || '-') + '</td>';
+        html += '<td><b>' + s.tot + '</b></td><td><b>' + s.pt + '</b></td><td><span class="faixa ' + fx + '">' + s.f + '</span></td></tr>';
+    }
+    document.getElementById('tbody').innerHTML = html;
+}
+
+// Tabs de Comissões
+function renderTabs() {
+    var tabs = [
+        ['institucionais', 'Institucionais'],
+        ['setoriais', 'Setoriais'],
+        ['temporarias', 'Temporárias'],
+        ['gestao_esan', 'Gestão ESAN'],
+        ['gestao_ufms', 'Gestão UFMS'],
+        ['colegiados', 'Colegiados'],
+        ['ndes', 'NDEs'],
+        ['coes', 'COEs']
+    ];
+    
+    var html = '';
+    for (var i = 0; i < tabs.length; i++) {
+        var t = tabs[i];
+        var count = COM[t[0]] ? COM[t[0]].length : 0;
+        var cls = t[0] === curTipo ? 'tab active' : 'tab';
+        html += '<button class="' + cls + '" onclick="setTipo(\'' + t[0] + '\')">' + t[1] + '<span class="count">' + count + '</span></button>';
+    }
+    document.getElementById('tabs').innerHTML = html;
+}
+
+function setTipo(t) {
+    curTipo = t;
+    renderTabs();
+    renderCom();
+}
+
+function renderCom() {
+    var list = COM[curTipo] || [];
+    var html = '';
+    
+    for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        var membrosHtml = '';
+        
+        for (var j = 0; j < c.mb.length; j++) {
+            var m = c.mb[j];
+            var fc = '';
+            var fl = m.f.toLowerCase();
+            if (fl.indexOf('presidente') >= 0 || fl.indexOf('coordenador') >= 0) fc = 'pres';
+            else if (fl.indexOf('titular') >= 0 || fl.indexOf('gestor') >= 0) fc = 'tit';
+            membrosHtml += '<div class="membro"><span class="membro-nome">' + m.n + '</span><span class="membro-func ' + fc + '">' + m.f + '</span></div>';
+        }
+        
+        html += '<div class="com-card"><div class="com-header"><div class="com-nome">' + c.nm + '</div></div><div class="com-membros">' + membrosHtml + '</div></div>';
+    }
+    
+    document.getElementById('comGrid').innerHTML = html;
+}
+
+// Gráficos
+function initCharts() {
+    for (var key in charts) {
+        if (charts[key]) charts[key].destroy();
+    }
+    
+    var fx = { 'Sem atividade': 0, 'Baixa': 0, 'Moderada': 0, 'Alta': 0, 'CRÍTICA': 0 };
+    for (var i = 0; i < Q.length; i++) fx[Q[i].f]++;
+    
+    charts.faixas = new Chart(document.getElementById('chartFaixas'), {
+        type: 'doughnut',
+        data: { labels: Object.keys(fx), datasets: [{ data: Object.values(fx), backgroundColor: ['#64748b', '#10b981', '#a855f7', '#f59e0b', '#f43f5e'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', padding: 15, font: { size: 13 } } } } }
+    });
+    
+    var tpLabels = ['Com. Institucionais', 'Com. Setoriais', 'Com. Temporárias', 'Gestão/Fiscalização', 'Colegiados', 'NDEs', 'COEs'];
+    var tpData = [0, 0, 0, 0, 0, 0, 0];
+    for (var i = 0; i < Q.length; i++) {
+        tpData[0] += Q[i].i; tpData[1] += Q[i].s; tpData[2] += Q[i].t; tpData[3] += Q[i].ge + Q[i].gu; tpData[4] += Q[i].co; tpData[5] += Q[i].nd; tpData[6] += Q[i].ce;
+    }
+    
+    charts.tipos = new Chart(document.getElementById('chartTipos'), {
+        type: 'bar',
+        data: { labels: tpLabels, datasets: [{ label: 'Participações', data: tpData, backgroundColor: ['#3b82f6', '#06b6d4', '#a855f7', '#f59e0b', '#10b981', '#f43f5e', '#64748b'], borderRadius: 6 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#2d3a4f' }, ticks: { color: '#94a3b8' } }, y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 12 } } } } }
+    });
+    
+    var t15 = Q.slice(0, 15);
+    var t15Labels = t15.map(function(s) { return s.n.split(' ').slice(0, 2).join(' '); });
+    var t15Data = t15.map(function(s) { return s.pt; });
+    var t15Colors = t15.map(function(s) { return s.f === 'CRÍTICA' ? '#f43f5e' : s.f === 'Alta' ? '#f59e0b' : '#3b82f6'; });
+    
+    charts.top15 = new Chart(document.getElementById('chartTop15'), {
+        type: 'bar',
+        data: { labels: t15Labels, datasets: [{ label: 'Pontuação', data: t15Data, backgroundColor: t15Colors, borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#2d3a4f' }, ticks: { color: '#94a3b8' } }, y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } } } }
+    });
+    
+    var rng = [{ l: '0', a: 0, b: 0 }, { l: '1-20', a: 1, b: 20 }, { l: '21-40', a: 21, b: 40 }, { l: '41-60', a: 41, b: 60 }, { l: '61-80', a: 61, b: 80 }, { l: '81-100', a: 81, b: 100 }, { l: '100+', a: 101, b: 999 }];
+    var distData = rng.map(function(r) { return Q.filter(function(s) { return s.pt >= r.a && s.pt <= r.b; }).length; });
+    
+    charts.dist = new Chart(document.getElementById('chartDist'), {
+        type: 'bar',
+        data: { labels: rng.map(function(r) { return r.l; }), datasets: [{ label: 'Servidores', data: distData, backgroundColor: '#06b6d4', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Faixa de Pontuação', color: '#94a3b8' } }, y: { grid: { color: '#2d3a4f' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Quantidade', color: '#94a3b8' } } } }
+    });
+}
+
+// Iniciar
+loadAllData();
+</script>
+</body>
+</html>
